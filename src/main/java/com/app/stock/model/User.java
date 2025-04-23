@@ -22,4 +22,12 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    private boolean isVerified = false;
+    private String otp;
+
+    public void markAsVerified() {
+        this.isVerified = true;
+        this.otp = null;
+    }
 }

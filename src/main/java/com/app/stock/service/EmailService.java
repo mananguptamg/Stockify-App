@@ -6,6 +6,7 @@ import com.app.stock.model.User;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -18,10 +19,14 @@ import java.util.Locale;
 public class EmailService {
     private final JavaMailSender mailSender;
 
+    @Value("${spring.mail.username}")
+    private String senderEmail;
+
     public void sendFolioEmail(User user, FolioResponse folio) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
+        helper.setFrom(String.format("Stockify <%s>", senderEmail));
         helper.setTo(user.getEmail());
         helper.setSubject("Your Stock Folio Summary");
 
@@ -47,5 +52,26 @@ public class EmailService {
         helper.setText(content.toString(), true); // true = HTML
 
         mailSender.send(message);
+    }
+
+    public void sendOtpEmail(String toEmail, String otp) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setFrom(String.format("Stockify <%s>", senderEmail));
+            helper.setTo(toEmail);
+            helper.setSubject("Verify your Stock Monitor Account");
+
+            String content = "<p>Thank you for registering with Stock Monitor!</p>"
+                    + "<p>Your OTP for account verification is:</p>"
+                    + "<h2 style='color:blue;'>" + otp + "</h2>"
+                    + "<p>Please enter this OTP in the app to verify your account.</p>";
+
+            helper.setText(content, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send OTP email", e);
+        }
     }
 }
