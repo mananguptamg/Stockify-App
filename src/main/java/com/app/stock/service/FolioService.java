@@ -1,13 +1,16 @@
 package com.app.stock.service;
 
 import com.app.stock.dto.FolioDetail;
+import com.app.stock.dto.FolioItemDTO;
 import com.app.stock.dto.FolioResponse;
 import com.app.stock.model.FolioItem;
 import com.app.stock.model.User;
 import com.app.stock.repository.FolioItemRepository;
 import com.opencsv.CSVReader;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
@@ -23,41 +26,24 @@ public class FolioService {
     private final FolioItemRepository folioItemRepository;
     private final TwelveDataClient twelveDataClient;
 
-    public void processCSV(MultipartFile file, User user) throws Exception {
-        List<FolioItem> items = new ArrayList<>();
+    public void addFolioItem(FolioItemDTO request, User user) {
+        String ticker = request.getTicker().trim();
+        int quantity = request.getQuantity();
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
-            String line;
-            boolean isFirstLine = true;
+        Optional<FolioItem> existingItemOpt = folioItemRepository.findByUserAndTicker(user, ticker);
 
-            while ((line = reader.readLine()) != null) {
-                if (isFirstLine) {
-                    isFirstLine = false;
-                    continue; // Skip header line
-                }
-                String[] data = line.split(",");
-                String ticker = data[0].trim();
-                int quantity = Integer.parseInt(data[1].trim());
-
-                Optional<FolioItem> existingItemOpt = folioItemRepository.findByUserAndTicker(user, ticker);
-
-                if (existingItemOpt.isPresent()) {
-                    // Stock already exists for user, update quantity
-                    FolioItem existingItem = existingItemOpt.get();
-                    existingItem.setQuantity(existingItem.getQuantity() + quantity);
-                    folioItemRepository.save(existingItem);
-                } else {
-                    // New stock entry
-                    FolioItem newItem = new FolioItem();
-                    newItem.setUser(user);
-                    newItem.setTicker(ticker);
-                    newItem.setQuantity(quantity);
-                    folioItemRepository.save(newItem);
-                }
-            }
+        if (existingItemOpt.isPresent()) {
+            FolioItem existingItem = existingItemOpt.get();
+            existingItem.setQuantity(existingItem.getQuantity() + quantity);
+            folioItemRepository.save(existingItem);
+        } else {
+            FolioItem newItem = FolioItem.builder()
+                    .user(user)
+                    .ticker(ticker)
+                    .quantity(quantity)
+                    .build();
+            folioItemRepository.save(newItem);
         }
-
-        folioItemRepository.saveAll(items);
     }
 
     public List<FolioItem> getFolioByUser(User user) {

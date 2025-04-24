@@ -1,5 +1,6 @@
 package com.app.stock.controller;
 
+import com.app.stock.dto.FolioItemDTO;
 import com.app.stock.service.EmailService;
 import com.app.stock.service.FolioService;
 import com.app.stock.util.AuthUtil;
@@ -17,14 +18,15 @@ public class FolioController {
     private final EmailService emailService;
 
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadFolio(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> addFolioItem(@RequestBody FolioItemDTO request) {
         try {
-            folioService.processCSV(file, authUtil.getCurrentUser());
-            return ResponseEntity.ok("Folio uploaded and saved successfully.");
+            folioService.addFolioItem(request, authUtil.getCurrentUser());
+            return ResponseEntity.ok("Stock added successfully.");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Failed to process CSV: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Failed to add stock: " + e.getMessage());
         }
     }
+
     @GetMapping("/value")
     public ResponseEntity<?> getFolioValue() {
         var user = authUtil.getCurrentUser();
