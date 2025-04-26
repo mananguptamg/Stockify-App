@@ -7,10 +7,12 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.text.NumberFormat;
 import java.util.Locale;
 
@@ -30,10 +32,29 @@ public class EmailService {
         helper.setTo(user.getEmail());
         helper.setSubject("Your Stock Folio Summary");
 
-        StringBuilder content = new StringBuilder("<h2>Your Stock Portfolio</h2><table border='1' style='border-collapse: collapse;'>");
-        content.append("<tr><th>Ticker</th><th>Quantity</th><th>Price</th><th>Value</th></tr>");
-
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.US);
+
+        StringBuilder content = new StringBuilder();
+
+        content.append("<html>")
+                .append("<body style='font-family:Arial, sans-serif; background-color:#f9f9f9; margin:0; padding:0;'>")
+                .append("<table width='100%' style='max-width:600px; margin:auto; background-color:#ffffff; border:1px solid #ddd;'>")
+
+                // Banner image row
+                .append("<tr>")
+                .append("<td style='text-align:center; padding:10px;'>")
+                .append("<img src='cid:stockifyBanner' alt='Stockify Banner' style='width:100%; max-width:600px; height:auto;'/>")
+                .append("</td>")
+                .append("</tr>")
+
+                // Email content row
+                .append("<tr>")
+                .append("<td style='padding:20px;'>")
+                .append("<h2 style='color:#1976d2;'>Your Stock Portfolio</h2>")
+                .append("<table border='1' cellpadding='8' cellspacing='0' style='border-collapse: collapse; width:100%;'>")
+                .append("<tr style='background-color:#1976d2; color:#ffffff;'>")
+                .append("<th>Ticker</th><th>Quantity</th><th>Price</th><th>Value</th>")
+                .append("</tr>");
 
         for (FolioDetail detail : folio.getItems()) {
             content.append("<tr>")
@@ -44,12 +65,21 @@ public class EmailService {
                     .append("</tr>");
         }
 
-        content.append("</table>");
-        content.append("<p><strong>Total Value: ")
+        content.append("</table>")
+                .append("<p style='margin-top:20px; font-size:16px;'><strong>Total Value: ")
                 .append(currencyFormat.format(folio.getTotalValue()))
-                .append("</strong></p>");
+                .append("</strong></p>")
+                .append("</td>")
+                .append("</tr>")
+                .append("</table>")
+                .append("</body>")
+                .append("</html>");
 
-        helper.setText(content.toString(), true); // true = HTML
+        helper.setText(content.toString(), true); // HTML content
+
+        // Embed the banner image
+        FileSystemResource banner = new FileSystemResource(new File("src/main/resources/stockify-banner.png"));
+        helper.addInline("stockifyBanner", banner);
 
         mailSender.send(message);
     }
@@ -63,12 +93,29 @@ public class EmailService {
             helper.setTo(toEmail);
             helper.setSubject("Verify your Stock Monitor Account");
 
-            String content = "<p>Thank you for registering with Stock Monitor!</p>"
-                    + "<p>Your OTP for account verification is:</p>"
-                    + "<h2 style='color:blue;'>" + otp + "</h2>"
-                    + "<p>Please enter this OTP in the app to verify your account.</p>";
+            String content = "<html>" +
+                    "<body style='font-family:Arial, sans-serif; background-color:#f9f9f9; margin:0; padding:0;'>" +
+                    "  <table width='100%' style='max-width:600px; margin:auto; background-color:#ffffff; border:1px solid #ddd;'>" +
+                    "    <tr>" +
+                    "      <td style='text-align:center; padding:10px 0;'>" +
+                    "        <img src='cid:stockifyBanner' alt='Stockify Banner' style='width:100%; max-width:600px; height:auto;'/>" +
+                    "      </td>" +
+                    "    </tr>" +
+                    "    <tr>" +
+                    "      <td style='padding:20px;'>" +
+                    "        <p style='font-size:16px; color:#333;'>Thank you for registering with <strong>Stock Monitor</strong>!</p>" +
+                    "        <p style='font-size:16px; color:#333;'>Your OTP for account verification is:</p>" +
+                    "        <h2 style='color:#1976d2; font-size:28px;'>" + otp + "</h2>" +
+                    "        <p style='font-size:16px; color:#333;'>Please enter this OTP in the app to verify your account.</p>" +
+                    "      </td>" +
+                    "    </tr>" +
+                    "  </table>" +
+                    "</body>" +
+                    "</html>";
 
             helper.setText(content, true);
+            FileSystemResource banner = new FileSystemResource(new File("src/main/resources/stockify-banner.png"));
+            helper.addInline("stockifyBanner", banner);
             mailSender.send(message);
         } catch (MessagingException e) {
             throw new RuntimeException("Failed to send OTP email", e);
